@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+##
+## how to change a word in a file
+##
+## 1. the perl way to do it
+##
+($^I,$/) = ("");
+$_=<>;
+s/remount,ro,noatime/remount,rw,noatime/g;
+print;
+
+##
+## the sed way in a bash manner (embedded in perl, low level regex support)
+##
+`sed -i -e 's/remount,ro,noatime/remount,rw,noatime/g' ${PATH}/etc/inittab`;
+
+##
+## the bash way of using the perl (embedded in perl, better regex support)
+##
+`/usr/bin/perl -p -i -e "s/remount,ro,noatime/remount,rw,noatime/g" ${PATH}/etc/inittab`;
+

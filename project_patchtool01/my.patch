@@ -1,0 +1,157 @@
+#
+# gcov kernel patch (2004-08-12)
+#   Provides GCOV code coverage infrastructure for Linux kernel 2.4.
+#   See http://ltp.sourceforge.net/coverage/gcov-kernel.php for details.
+#
+# Documentation/Configure.help |   30 
+# Makefile                     |   16 
+# arch/i386/config.in          |    3 
+# arch/i386/kernel/head.S      |   23 
+# arch/ia64/config.in          |    3 
+# arch/ia64/kernel/head.S      |   21 
+# arch/ppc/boot/chrp/main.c    |   10 
+# arch/ppc/config.in           |    2 
+# arch/ppc/kernel/entry.S      |    9 
+# arch/ppc/kernel/head.S       |   22 
+# arch/ppc/kernel/prom_init.c  |    4 
+# arch/ppc64/config.in         |    2 
+# arch/ppc64/kernel/head.S     |   21 
+# arch/s390/config.in          |    3 
+# arch/s390/kernel/head.S      |   20 
+# arch/s390x/config.in         |    3 
+# arch/s390x/kernel/head.S     |   20 
+# arch/x86_64/config.in        |    2 
+# arch/x86_64/kernel/head.S    |   21 
+# drivers/Makefile             |    4 
+# drivers/gcov/Config.in       |   13 
+# drivers/gcov/Makefile        |   15 
+# drivers/gcov/gcov-core.c     |  246 ++++++
+# drivers/gcov/gcov-proc.c     | 1596 +++++++++++++++++++++++++++++++++++++++++
+# include/linux/gcov.h         |  184 ++++
+# include/linux/module.h       |    2 
+# kernel/module.c              |   20 
+# 27 files changed, 2310 insertions(+), 5 deletions(-)
+#
+
+diff -Naurp linux-2.4/Documentation/Configure.help linux-2.4-gcov/Documentation/Configure.help
+--- test/fileA.txt	2004-02-18 14:36:30.000000000 +0100
++++ linux-2.4-gcov/Documentation/Configure.help	2004-08-12 17:07:16.470312116 +0200
+@@ -25374,6 +25374,36 @@ CONFIG_PROCESS_DEBUG
+   a debugging option; you probably do not want to set it unless you
+   are an S390 port maintainer.
+ 
++Include GCOV coverage profiling
++CONFIG_GCOV_PROFILE
++  Provide infrastructure for GCOV kernel coverage support.
++
++  Enable GCOV_ALL to get coverage data for the entire kernel
++  source.
++
++  To get coverage data for only specific files or directories,
++  add the following line to the respective Makefile:
++
++          EXTRA_CFLAGS += $(GCOV_FLAGS)
++
++  Note that GCOV_PROC has to be enabled to access GCOV kernel
++  coverage data.
++
++Profile entire Kernel
++CONFIG_GCOV_ALL
++  If you say Y here, it will compile the entire kernel with coverage
++  option enabled.
++
++Provide GCOV proc file system entry
++CONFIG_GCOV_PROC
++  Install a proc file system entry at /proc/gcov which provides
++  access to the current coverage state of the kernel code.
++
++  This option is also available as a module called gcov-proc.o.
++  It can be loaded using:
++
++    modprobe gcov-proc
++
+ #
+ # ARM options
+ #
+diff -Naurp linux-2.4/Makefile linux-2.4-gcov/Makefile
+--- test/fileB.txt	2004-02-18 14:36:32.000000000 +0100
++++ linux-2.4/Makefile	2004-08-12 17:07:16.480312116 +0200
+@@ -1,7 +1,7 @@
+ VERSION = 2
+ PATCHLEVEL = 4
+ SUBLEVEL = 35
+-EXTRAVERSION =
++EXTRAVERSION = -gcov
+ 
+ KERNELRELEASE=$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
+ 
+@@ -19,6 +19,7 @@ FINDHPATH	= $(HPATH)/asm $(HPATH)/linux 
+ HOSTCC  	= gcc
+ HOSTCFLAGS	= -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer
+ 
++GCOV_FLAGS	= -fprofile-arcs -ftest-coverage
+ ifndef CROSS_COMPILE
+ CROSS_COMPILE 	= /vobs/cots/eldk/eldk2.1/usr/bin/ppc_82xx-
+ endif
+ #
+@@ -194,6 +195,7 @@ DRIVERS-$(CONFIG_BLUEZ) += drivers/bluet
+ DRIVERS-$(CONFIG_HOTPLUG_PCI) += drivers/hotplug/vmlinux-obj.o
+ DRIVERS-$(CONFIG_ISDN_BOOL) += drivers/isdn/vmlinux-obj.o
+ DRIVERS-$(CONFIG_CRYPTO) += crypto/crypto.o
++DRIVERS-$(CONFIG_GCOV_PROFILE) += drivers/gcov/gcov.o
+ 
+ DRIVERS := $(DRIVERS-y)
+ 
+@@ -323,7 +325,11 @@ include/config/MARKER: scripts/split-inc
+ linuxsubdirs: $(patsubst %, _dir_%, $(SUBDIRS))
+ 
+ $(patsubst %, _dir_%, $(SUBDIRS)) : dummy include/linux/version.h include/config/MARKER
++ifdef CONFIG_GCOV_ALL
++	$(MAKE) CFLAGS="$(CFLAGS) $(GCOV_FLAGS) $(CFLAGS_KERNEL)" -C $(patsubst _dir_%, %, $@)
++else
+ 	$(MAKE) CFLAGS="$(CFLAGS) $(CFLAGS_KERNEL)" -C $(patsubst _dir_%, %, $@)
++endif
+ 
+ $(TOPDIR)/include/linux/version.h: include/linux/version.h
+ $(TOPDIR)/include/linux/compile.h: include/linux/compile.h
+@@ -396,7 +402,11 @@ modules: $(patsubst %, _mod_%, $(SUBDIRS
+ 
+ .PHONY: $(patsubst %, _mod_%, $(SUBDIRS))
+ $(patsubst %, _mod_%, $(SUBDIRS)) : include/linux/version.h include/config/MARKER
++ifdef CONFIG_GCOV_ALL
++	$(MAKE) -C $(patsubst _mod_%, %, $@) CFLAGS="$(CFLAGS) $(GCOV_FLAGS) $(MODFLAGS)" MAKING_MODULES=1 modules
++else
+ 	$(MAKE) -C $(patsubst _mod_%, %, $@) CFLAGS="$(CFLAGS) $(MODFLAGS)" MAKING_MODULES=1 modules
++endif
+ 
+ .PHONY: modules_install
+ modules_install: _modinst_ $(patsubst %, _modinst_%, $(SUBDIRS)) _modinst_post
+@@ -448,7 +458,7 @@ modules modules_install: dummy
+ endif
+ 
+ clean:	archclean
+-	find . \( -name '*.[oas]' -o -name core -o -name '.*.flags' \) -type f -print \
++	find . \( -name '*.[oas]' -o -name core -o -name '.*.flags' -o -name '*.bb' -o -name '*.bbg' -o -name '*.gcno' \) -type f -print \
+ 		| grep -v lxdialog/ | xargs rm -f
+ 	rm -f $(CLEAN_FILES)
+ 	rm -rf $(CLEAN_DIRS)
+@@ -464,7 +474,7 @@ distclean: mrproper
+ 	rm -f core `find . \( -not -type d \) -and \
+ 		\( -name '*.orig' -o -name '*.rej' -o -name '*~' \
+ 		-o -name '*.bak' -o -name '#*#' -o -name '.*.orig' \
+-		-o -name '.*.rej' -o -name '.SUMS' -o -size 0 \) -type f -print` TAGS tags
++		-o -name '.*.rej' -o -name '.SUMS' -o -name '*.bb' -o -name '*.bbg' -o -name '*.gcno' -o -size 0 \) -type f -print` TAGS tags
+ 
+ backup: mrproper
+ 	cd .. && tar cf - linux/ | gzip -9 > backup.gz
+diff -Naurp linux-2.4/arch/i386/config.in linux-2.4-gcov/arch/i386/config.in
+--- test/dirC/fileC.txt	2004-02-18 14:36:30.000000000 +0100
++++ linux-2.4-gcov/arch/i386/config.in	2004-08-12 17:07:15.810312116 +0200
+@@ -486,4 +486,7 @@ int 'Kernel messages buffer length shift
+ endmenu
+ 
+ source crypto/Config.in
++
++source drivers/gcov/Config.in
++
+ source lib/Config.in
