@@ -17,7 +17,7 @@ print "hashing demo\n";
 ## init
 ## access the single elements using "keys" and "elements": foreach $person (keys %ages)
 
-%ages = ("Michael Caine", 39,
+my %ages = ("Michael Caine", 39,
 	 "Dirty Den", 34,
 	 "Angie", 27,
 	 "Willy", "21 in dog years",
@@ -31,7 +31,7 @@ print "Willy - " . $ages{"Willy"} . "\n";
 print "The Queen Mum - " . $ages{"The Queen Mum"} . "\n";
 
 ## check element exists?
-$person = "Michael Caine";
+my $person = "Michael Caine";
 
 print "Facebook knows '$person' ";
 if (defined $ages{$person}) {
@@ -51,9 +51,9 @@ if (defined $ages{$person}) {
 print "\n\n";
 
 ## check if key substring is contained
-$substring = "Michael";
+my $substring = "Michael";
 
-$matching_key = (grep { $_ =~ /^$substring/ } keys %ages)[0];
+my $matching_key = (grep { $_ =~ /^$substring/ } keys %ages)[0];
 print "substring = '$substring', matching_key = '$matching_key' - Google knows: '$substring' is '";
 if (defined $ages{$matching_key}) {
     print ($ages{$matching_key}) . " years old.'";
@@ -62,7 +62,7 @@ if (defined $ages{$matching_key}) {
 }
 print "\n\n";
 
-$substring = "Lothar";
+my $substring = "Lothar";
 
 $matching_key = (grep { $_ =~ /^$substring/ } keys %ages)[0];
 print "substring = '$substring', matching_key = '$matching_key' - Google knows: '$substring' is '";
@@ -75,7 +75,7 @@ print "\n\n";
 
 
 ## transform the associative array into an array
-@info = %ages;
+my @info = %ages;
 print "\@info:\n\t@info\n";
 print "\$info[5]:\n\t$info[5]\n\n";
 
