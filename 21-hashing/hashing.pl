@@ -30,6 +30,8 @@ print "Angie - " . $ages{"Angie"} . "\n";
 print "Willy - " . $ages{"Willy"} . "\n";
 print "The Queen Mum - " . $ages{"The Queen Mum"} . "\n";
 
+## check element exists?
+print "Facebook says: 'Michael Caine' exists? - '" . (defined $ages{"Michael Caine"}) . "'\n";
 
 ## transform the associative array into an array
 @info = %ages;
