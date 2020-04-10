@@ -32,20 +32,46 @@ print "The Queen Mum - " . $ages{"The Queen Mum"} . "\n";
 
 ## check element exists?
 $person = "Michael Caine";
-print "Facebook knows '$person' exists: - '" . (defined $ages{$person}) . "' (true)\n";
+
+print "Facebook knows '$person' ";
+if (defined $ages{$person}) {
+    print "exists: - '" . (defined $ages{$person}) . "' (true)";
+} else {
+    print "does not exist, remove account";
+}
+print "\n\n";
+
 $person = "Lothar Rubusch";
-print "Facebook knows '$person' exists: - '" . (defined $ages{$person}) . "' (empty, false)\n";
+print "Facebook knows '$person' ";
+if (defined $ages{$person}) {
+    print "exists: - '" . (defined $ages{$person}) . "' (true)";
+} else {
+    print "does not exist, remove account";
+}
+print "\n\n";
 
 ## check if key substring is contained
 $substring = "Michael";
 
 $matching_key = (grep { $_ =~ /^$substring/ } keys %ages)[0];
-print "substring = '$substring', matching_key = '$matching_key' - Google knows: '$substring' is '" . ($ages{$matching_key}) . " years old.'\n";
+print "substring = '$substring', matching_key = '$matching_key' - Google knows: '$substring' is '";
+if (defined $ages{$matching_key}) {
+    print ($ages{$matching_key}) . " years old.'";
+} else {
+    print "forever young!";
+}
+print "\n\n";
 
 $substring = "Lothar";
 
 $matching_key = (grep { $_ =~ /^$substring/ } keys %ages)[0];
-print "substring = '$substring', matching_key = '$matching_key' - Google knows: '$substring' is '" . ($ages{$matching_key}) . " years old.'\n";
+print "substring = '$substring', matching_key = '$matching_key' - Google knows: '$substring' is '";
+if (defined $ages{$matching_key}) {
+    print ($ages{$matching_key}) . " years old.'";
+} else {
+    print "forever young!";
+}
+print "\n\n";
 
 
 ## transform the associative array into an array
